@@ -1235,7 +1235,7 @@ pub fn url_from_webview(webview: &WKWebView) -> Result<String> {
 
 pub fn platform_webview_version() -> Result<String> {
   unsafe {
-    print!("this is test!!!!");
+    print!("this is test!!!!!!!!!!!!!");
     let bundle = NSBundle::bundleWithIdentifier(&NSString::from_str("com.apple.WebKit")).unwrap();
     let dict = bundle.infoDictionary().unwrap();
     let webkit_version = dict
