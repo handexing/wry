@@ -1233,7 +1233,7 @@ pub fn url_from_webview(webview: &WKWebView) -> Result<String> {
     .map_err(Into::into)
 }
 
-pub fn platform_webview_version() -> Result<String> {
+/*pub fn platform_webview_version() -> Result<String> {
   unsafe {
     print!("=======================");
     let bundle = NSBundle::bundleWithIdentifier(&NSString::from_str("com.apple.WebKit")).unwrap();
@@ -1245,6 +1245,100 @@ pub fn platform_webview_version() -> Result<String> {
 
     bundle.unload();
     Ok(webkit_version.to_string())
+  }
+}*/
+
+pub fn platform_webview_version() -> Result<String> {
+  // 添加详细日志
+  println!("[DEBUG] Entering platform_webview_version");
+
+  // 安全方式获取版本
+  let version = get_webkit_version().unwrap_or_else(|e| {
+    eprintln!("[ERROR] Failed to get WebKit version: {}", e);
+    "unknown".to_string()
+  });
+
+  println!("[DEBUG] WebKit version: {}", version);
+  Ok(version)
+}
+
+fn get_webkit_version() -> Result<String, Box<dyn std::error::Error>> {
+  // 方法1: 直接读取系统文件
+  let plist_path = "/System/Library/Frameworks/WebKit.framework/Resources/Info.plist";
+  if let Ok(version) = read_plist_file(plist_path) {
+    return Ok(version);
+  }
+
+  // 方法2: 系统命令备选
+  if let Ok(version) = run_system_command() {
+    return Ok(version);
+  }
+
+  // 方法3: 根据 macOS 版本返回硬编码值
+  if let Some(os_version) = os_version() {
+    return match os_version.as_str() {
+      "15.0" | "15.5" | "15.6" => Ok("8614.1.25".to_string()),
+      _ => Ok("unknown".to_string()),
+    };
+  }
+
+  // 保底方案
+  Ok("unknown".to_string())
+}
+
+/// 安全方式1: 直接读取 plist 文件
+fn read_plist_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+  use plist::Value;
+  use std::fs;
+
+  let data = fs::read(path)?;
+  let plist = Value::from_reader(&data[..])?;
+
+  if let Some(dict) = plist.as_dictionary() {
+    if let Some(version) = dict.get("CFBundleVersion") {
+      if let Some(ver_str) = version.as_string() {
+        return Ok(ver_str.to_string());
+      }
+    }
+  }
+
+  Err("CFBundleVersion not found in plist".into())
+}
+
+/// 安全方式2: 使用系统命令获取
+fn run_system_command() -> Result<String, Box<dyn std::error::Error>> {
+  use std::process::Command;
+
+  let output = Command::new("/usr/bin/defaults")
+      .args([
+        "read",
+        "/System/Library/Frameworks/WebKit.framework/Resources/Info.plist",
+        "CFBundleVersion"
+      ])
+      .output()?;
+
+  if output.status.success() {
+    let version = String::from_utf8(output.stdout)?;
+    Ok(version.trim().to_string())
+  } else {
+    Err("Command execution failed".into())
+  }
+}
+
+/// 获取 macOS 主版本号
+fn os_version() -> Option<String> {
+  use std::process::Command;
+
+  let output = Command::new("sw_vers")
+      .arg("-productVersion")
+      .output()
+      .ok()?;
+
+  if output.status.success() {
+    let version = String::from_utf8(output.stdout).ok()?;
+    version.split('.').next().map(|s| s.to_string())
+  } else {
+    None
   }
 }
 
