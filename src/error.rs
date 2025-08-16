@@ -90,13 +90,15 @@ impl Error {
   }
 }
 
-// 为常见错误类型实现 From trait
-impl From<std::io::Error> for Error {
-  fn from(error: std::io::Error) -> Self {
-    Error::Io(error)
-  }
-}
+// 删除冲突的 From 实现
+// 以下代码需要完全删除：
+// impl From<std::io::Error> for Error {
+//   fn from(error: std::io::Error) -> Self {
+//     Error::new(error)
+//   }
+// }
 
+// 添加其他必要的转换
 impl From<plist::Error> for Error {
   fn from(error: plist::Error) -> Self {
     Error::new(error)
