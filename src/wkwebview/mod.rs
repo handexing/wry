@@ -1248,21 +1248,23 @@ pub fn url_from_webview(webview: &WKWebView) -> Result<String> {
   }
 }*/
 
-pub fn platform_webview_version() -> Result<String> {
-  // 添加详细日志
+pub fn platform_webview_version() -> crate::Result<String> {
   println!("[DEBUG] Entering platform_webview_version");
 
   // 安全方式获取版本
-  let version = get_webkit_version().unwrap_or_else(|e| {
-    eprintln!("[ERROR] Failed to get WebKit version: {}", e);
-    "unknown".to_string()
-  });
-
-  println!("[DEBUG] WebKit version: {}", version);
-  Ok(version)
+  match get_webkit_version() {
+    Ok(version) => {
+      println!("[DEBUG] WebKit version: {}", version);
+      Ok(version)
+    }
+    Err(e) => {
+      eprintln!("[ERROR] Failed to get WebKit version: {}", e);
+      Ok("unknown".to_string())
+    }
+  }
 }
 
-fn get_webkit_version() -> Result<String, Box<dyn std::error::Error>> {
+fn get_webkit_version() -> crate::Result<String> {
   // 方法1: 直接读取系统文件
   let plist_path = "/System/Library/Frameworks/WebKit.framework/Resources/Info.plist";
   if let Ok(version) = read_plist_file(plist_path) {
@@ -1287,12 +1289,14 @@ fn get_webkit_version() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 /// 安全方式1: 直接读取 plist 文件
-fn read_plist_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
+fn read_plist_file(path: &str) -> crate::Result<String> {
   use plist::Value;
   use std::fs;
+  use std::io::Cursor;
 
   let data = fs::read(path)?;
-  let plist = Value::from_reader(&data[..])?;
+  let cursor = Cursor::new(data);
+  let plist = Value::from_reader(cursor)?;
 
   if let Some(dict) = plist.as_dictionary() {
     if let Some(version) = dict.get("CFBundleVersion") {
@@ -1302,11 +1306,11 @@ fn read_plist_file(path: &str) -> Result<String, Box<dyn std::error::Error>> {
     }
   }
 
-  Err("CFBundleVersion not found in plist".into())
+  Err(Error::from_str("CFBundleVersion not found in plist"))
 }
 
 /// 安全方式2: 使用系统命令获取
-fn run_system_command() -> Result<String, Box<dyn std::error::Error>> {
+fn run_system_command() -> crate::Result<String> {
   use std::process::Command;
 
   let output = Command::new("/usr/bin/defaults")
@@ -1321,7 +1325,7 @@ fn run_system_command() -> Result<String, Box<dyn std::error::Error>> {
     let version = String::from_utf8(output.stdout)?;
     Ok(version.trim().to_string())
   } else {
-    Err("Command execution failed".into())
+    Err(Error::from_str("Command execution failed"))
   }
 }
 

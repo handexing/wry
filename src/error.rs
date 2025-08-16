@@ -74,4 +74,43 @@ pub enum Error {
   #[cfg(any(target_os = "macos", target_os = "ios"))]
   #[error("data store is currently opened")]
   DataStoreInUse,
+  #[error("Other error: {0}")]
+  Other(#[source] Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl Error {
+  /// 创建新的自定义错误
+  pub fn new<E: std::error::Error + Send + Sync + 'static>(error: E) -> Self {
+    Error::Other(Box::new(error))
+  }
+
+  /// 从字符串创建错误
+  pub fn from_str(msg: &str) -> Self {
+    Error::Other(Box::new(std::io::Error::new(std::io::ErrorKind::Other, msg)))
+  }
+}
+
+// 为常见错误类型实现 From trait
+impl From<std::io::Error> for Error {
+  fn from(error: std::io::Error) -> Self {
+    Error::Io(error)
+  }
+}
+
+impl From<plist::Error> for Error {
+  fn from(error: plist::Error) -> Self {
+    Error::new(error)
+  }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+  fn from(error: std::string::FromUtf8Error) -> Self {
+    Error::new(error)
+  }
+}
+
+impl From<&str> for Error {
+  fn from(msg: &str) -> Self {
+    Error::from_str(msg)
+  }
 }
