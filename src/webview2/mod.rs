@@ -564,10 +564,17 @@ impl InnerWebView {
     settings.SetAreDevToolsEnabled(attributes.devtools)?;
     settings.SetIsScriptEnabled(!attributes.javascript_disabled)?;
 
+    // 设置 User Agent
     if let Some(user_agent) = &attributes.user_agent {
       if let Ok(settings2) = settings.cast::<ICoreWebView2Settings2>() {
         settings2.SetUserAgent(&HSTRING::from(user_agent))?;
+
+        // **在这里加上字体渲染模式**
+        settings2.PutPreferredRenderingMode(COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
       }
+    } else if let Ok(settings2) = settings.cast::<ICoreWebView2Settings2>() {
+      // 兼容没有 user_agent 情况
+      settings2.PutPreferredRenderingMode(COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
     }
 
     if !pl_attrs.browser_accelerator_keys {
