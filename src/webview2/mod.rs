@@ -32,6 +32,12 @@ use crate::{
   proxy::ProxyConfig, Error, MemoryUsageLevel, PageLoadEvent, Rect, RequestAsyncResponder, Result,
   WebViewAttributes, RGBA,
 };
+use windows::Win32::Web::WebView2::ICoreWebView2Settings2;
+
+// 定义字体渲染模式常量
+const COREWEBVIEW2_PREFERRED_RENDERING_MODE_AUTO: i32 = 0;
+const COREWEBVIEW2_PREFERRED_RENDERING_MODE_DIRECT2D: i32 = 1;
+const COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT: i32 = 2;
 
 type EventRegistrationToken = i64;
 
@@ -564,18 +570,20 @@ impl InnerWebView {
     settings.SetAreDevToolsEnabled(attributes.devtools)?;
     settings.SetIsScriptEnabled(!attributes.javascript_disabled)?;
 
-    // 设置 User Agent
-    if let Some(user_agent) = &attributes.user_agent {
-      if let Ok(settings2) = settings.cast::<ICoreWebView2Settings2>() {
+    // 先尝试 cast 一次
+    if let Ok(settings2) = settings.cast::<ICoreWebView2Settings2>() {
+      // 设置 User Agent（如果有）
+      if let Some(user_agent) = &attributes.user_agent {
         settings2.SetUserAgent(&HSTRING::from(user_agent))?;
-
-        // **在这里加上字体渲染模式**
-        settings2.PutPreferredRenderingMode(COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
       }
-    } else if let Ok(settings2) = settings.cast::<ICoreWebView2Settings2>() {
-      // 兼容没有 user_agent 情况
-      settings2.PutPreferredRenderingMode(COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
+
+      // 设置字体渲染模式
+      unsafe {
+        let vtable = settings2.vtable();
+        ((*vtable).PutPreferredRenderingMode)(settings2.abi(), COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
+      }
     }
+
 
     if !pl_attrs.browser_accelerator_keys {
       if let Ok(settings3) = settings.cast::<ICoreWebView2Settings3>() {
