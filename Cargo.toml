@@ -54,6 +54,7 @@ plist = "1.7.4"
 raw-window-handle = { version = "0.6", features = ["std"] }
 dpi = "0.1"
 cookie = "0.18"
+windows = { version = "0.61", features = ["Win32_Web_WebView2"] }
 
 [target."cfg(any(target_os = \"linux\", target_os = \"dragonfly\", target_os = \"freebsd\", target_os = \"openbsd\", target_os = \"netbsd\"))".dependencies]
 javascriptcore-rs = { version = "=1.1.2", features = [
