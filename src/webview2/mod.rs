@@ -32,12 +32,6 @@ use crate::{
   proxy::ProxyConfig, Error, MemoryUsageLevel, PageLoadEvent, Rect, RequestAsyncResponder, Result,
   WebViewAttributes, RGBA,
 };
-use windows::Win32::Web::WebView2::ICoreWebView2Settings2;
-
-// 定义字体渲染模式常量
-const COREWEBVIEW2_PREFERRED_RENDERING_MODE_AUTO: i32 = 0;
-const COREWEBVIEW2_PREFERRED_RENDERING_MODE_DIRECT2D: i32 = 1;
-const COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT: i32 = 2;
 
 type EventRegistrationToken = i64;
 
@@ -575,12 +569,6 @@ impl InnerWebView {
       // 设置 User Agent（如果有）
       if let Some(user_agent) = &attributes.user_agent {
         settings2.SetUserAgent(&HSTRING::from(user_agent))?;
-      }
-
-      // 设置字体渲染模式
-      unsafe {
-        let vtable = settings2.vtable();
-        ((*vtable).PutPreferredRenderingMode)(settings2.abi(), COREWEBVIEW2_PREFERRED_RENDERING_MODE_GDI_CLASSIC_TEXT)?;
       }
     }
 
